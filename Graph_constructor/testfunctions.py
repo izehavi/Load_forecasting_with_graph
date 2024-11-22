@@ -11,10 +11,16 @@ from graph_analyzer import GraphAnalyzer
 path_train = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\train.csv"
 path_test = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\test.csv"
 
-L_path_to_W = ["examples/graph_representations/correlation/W.txt", "examples/graph_representations/distsplines/W.txt", 
-               "examples/graph_representations/distsplines2/W.txt", "examples/graph_representations/dtw/W.txt",
-               "examples/graph_representations/gl3sr/W.txt", "examples/graph_representations/precision/W.txt",
-               "examples/graph_representations/space/W.txt"]
+L_path_to_W = [
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\correlation\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\distsplines\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\distsplines2\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\dtw\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\gl3sr\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\precision\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\space\W.txt"
+]
+
 
 df_pos = pd.DataFrame(
     {'VILLE': ['LILLE', 'ROUEN', 'PARIS', 'STRASBOURG', 'BREST', 'NANTES', 'ORLEANS', 'DIJON', 'BORDEAUX', 'LYON',
@@ -66,10 +72,11 @@ for i in range(len(L_path_to_W)):
 
 
 for i in range(10) :
-    analyzed_graph = GraphAnalyzer(W_threshold, data.nodes_dataframe, "load" ,i, **df_pos)
-
+    analyzed_graph = GraphAnalyzer(W_threshold, data.nodes_dataframe, "temp" ,i, **df_pos)
+    print(analyzed_graph.smoothness)
 
 print("END")
 
 
 # %%
+print("hello")
