@@ -52,10 +52,11 @@ for key in data.nodes_dataframe.keys():
 
 #%% Test the GraphBuilder class
 Graph = GraphBuilder(L_path_to_W)
-
+dictW = {}
 for i in range(len(L_path_to_W)):
     W = Graph.load_Wmatrix(L_path_to_W[i])
     print(W)
+    dictW["W"+str(i)] = W
 
     # We are testing different filter of edges 
     #W_threshold = Graph.keep_top_n(60)# keep the 60% of the edges
@@ -73,16 +74,17 @@ for i in range(len(L_path_to_W)):
 #%% Test the GraphAnalyzer class
 keys = ["load","temp","nebu","wind","tempMax","tempMin"]
 
-for key in keys:
-    smooth = []
-    # We are using tqdm in this loop
-    
-    for i in tqdm(range(1000)) :
-        analyzed_graph = GraphAnalyzer(W_threshold, data.nodes_dataframe, key ,i, **df_pos)
-        #print(analyzed_graph.smoothness)
-        smooth.append(analyzed_graph.smoothness)
-    plt.plot(smooth)
-    plt.show()
+for _, Wi in dictW.items():
+    for key in keys:
+        smooth = []
+        # We are using tqdm in this loop
+        
+        for i in tqdm(range(10)) :
+            analyzed_graph = GraphAnalyzer(Wi, data.nodes_dataframe, key ,i, **df_pos)
+            #print(analyzed_graph.smoothness)
+            #smooth.append(analyzed_graph.smoothness)
+        #plt.plot(smooth)
+        #plt.show()
 
 print("END")
 # %%
