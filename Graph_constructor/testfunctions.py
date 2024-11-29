@@ -2,6 +2,8 @@
  #%%
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 from dataloader import DataLoader
 from graph_builder import GraphBuilder
 from visualizations import GraphPlotter
@@ -12,15 +14,15 @@ path_train = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Proj
 path_test = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\test.csv"
 
 L_path_to_W = [
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\correlation\W.txt",
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\distsplines\W.txt",
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\distsplines2\W.txt",
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\dtw\W.txt",
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\gl3sr\W.txt",
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\precision\W.txt",
-    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\examples\graph_representations\space\W.txt"
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\correlation\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\distsplines\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\distsplines2\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\dtw\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\gl3sr\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\precision\W.txt",
+    r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\space\W.txt"
 ]
-
+path_test = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\examples_graph\correlation\W.txt"
 
 df_pos = pd.DataFrame(
     {'VILLE': ['LILLE', 'ROUEN', 'PARIS', 'STRASBOURG', 'BREST', 'NANTES', 'ORLEANS', 'DIJON', 'BORDEAUX', 'LYON',
@@ -55,11 +57,11 @@ for i in range(len(L_path_to_W)):
     W = Graph.load_Wmatrix(L_path_to_W[i])
     print(W)
 
+    # We are testing different filter of edges 
+    #W_threshold = Graph.keep_top_n(60)# keep the 60% of the edges
 
-
-
-
-    W_threshold = Graph.keep_top_n(W, 60)
+    W_threshold = Graph.filter_edges_by_energy(0.8) # 80% of the energy
+    print(W_threshold)
     # Test the GraphPlotter class
     plotter = GraphPlotter(W_threshold, df_pos)
     #plotter.plot_graph(title="Graph", figsize=(10, 8))
@@ -69,14 +71,23 @@ for i in range(len(L_path_to_W)):
 
 
 #%% Test the GraphAnalyzer class
+keys = ["load","temp","nebu","wind","tempMax","tempMin"]
 
-
-for i in range(10) :
-    analyzed_graph = GraphAnalyzer(W_threshold, data.nodes_dataframe, "temp" ,i, **df_pos)
-    print(analyzed_graph.smoothness)
+for key in keys:
+    smooth = []
+    # We are using tqdm in this loop
+    
+    for i in tqdm(range(1000)) :
+        analyzed_graph = GraphAnalyzer(W_threshold, data.nodes_dataframe, key ,i, **df_pos)
+        #print(analyzed_graph.smoothness)
+        smooth.append(analyzed_graph.smoothness)
+    plt.plot(smooth)
+    plt.show()
 
 print("END")
-
-
 # %%
-print("hello")
+
+
+
+
+

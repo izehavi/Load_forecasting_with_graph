@@ -1,6 +1,7 @@
 import networkx as nx
 from pygsp import graphs
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class GraphAnalyzer:
@@ -21,6 +22,8 @@ class GraphAnalyzer:
         self.G = self.construct_real_graph(**kwargs)
         self.L = self.G.L
         self.smoothness = self.smoothness_calcul()
+        self.U, self.lambdas, self.GFT_signal = self.graph_fourier_transform() # to have the U and lambdas of the GFT (Eigeenvalues and eigenvectors)
+        self.energy = self.energy_distribution_calcul()
         
     def smoothness_calcul(self):
         """Calcul the smoothness of a signal on a graph.
@@ -75,3 +78,36 @@ class GraphAnalyzer:
         #Normalization of the signal
         signal_array = (signal_array - np.mean(signal_array)) / np.std(signal_array)
         return signal_array
+    
+    def graph_fourier_transform(self):
+        """_summary_
+        Calculate the Fourier Transform of the signal on the graph.
+        
+        Returns:
+            np.ndarray: Fourier Transform of the signal.
+        """
+        self.G.compute_fourier_basis()
+        self.U = self.G.U
+        self.lambdas = self.G.e
+        self.GFT_signal = self.U.T @ self.signal
+        return self.U, self.lambdas, self.GFT_signal
+    
+    
+    def energy_distribution_calcul(self):
+        """Calcule et visualise la distribution d'énergie du signal."""
+        energy = np.zeros((self.U.shape[0], self.U.shape[1]))
+        for n in range(self.U.shape[0]):  # Parcourir les nœuds
+            for k in range(self.U.shape[1]):  # Parcourir les fréquences
+                energy[n, k] = self.signal[n] * self.U[n, k] * self.GFT_signal[k]
+
+        # Visualisation
+        plt.figure(figsize=(8, 6))
+        plt.imshow(energy, cmap='viridis', interpolation='nearest', aspect='auto')
+        plt.colorbar(label='Énergie')
+        plt.title("Distribution de l'énergie du signal sur le graphe")
+        plt.xlabel("Fréquences (indices des valeurs propres)")
+        plt.ylabel("Nœuds")
+        plt.show()
+
+        return energy
+        
