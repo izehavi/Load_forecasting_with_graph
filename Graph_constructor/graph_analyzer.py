@@ -23,8 +23,12 @@ class GraphAnalyzer:
         self.L = self.G.L
         self.smoothness = self.smoothness_calcul()
         self.U, self.lambdas, self.GFT_signal = self.graph_fourier_transform() # to have the U and lambdas of the GFT (Eigeenvalues and eigenvectors)
-        self.energy = self.energy_distribution_calcul()
+        self.energyE = self.energy_distribution_calcul()
         self.energyG = self.energy_distribution_interference_reduced()
+        self.bandwithE = self.bandwith(self.energyE)
+        #self.bandwithG = self.bandwith(self.energyG)
+        self.kindexE = self.find_mainfrequency_ofnode(self.energyE)
+        #self.kindexG = self.find_mainfrequency_ofnode(self.energyG)
         
     def smoothness_calcul(self):
         """Calcul the smoothness of a signal on a graph.
@@ -101,19 +105,23 @@ class GraphAnalyzer:
         returns:
             np.ndarray: Energy distribution of the signal on the graph E(n,k).
         """
+        
+        def plot_energy(energy) :
+            plt.figure(figsize=(8, 6))
+            plt.imshow(energy, cmap='viridis', interpolation='nearest', aspect='auto')
+            plt.colorbar(label='Énergie')
+            plt.title("Distribution de l'énergie du signal sur le graphe")
+            plt.xlabel("Fréquences (indices des valeurs propres)")
+            plt.ylabel("Nœuds")
+            plt.show()
+        
         energy = np.zeros((self.U.shape[0], self.U.shape[1]))
         for n in range(self.U.shape[0]):  # Parcourir les nœuds
             for k in range(self.U.shape[1]):  # Parcourir les fréquences
                 energy[n, k] = self.signal[n] * self.U[n, k] * self.GFT_signal[k]
 
         # Visualisation
-        plt.figure(figsize=(8, 6))
-        plt.imshow(energy, cmap='viridis', interpolation='nearest', aspect='auto')
-        plt.colorbar(label='Énergie')
-        plt.title("Distribution de l'énergie du signal sur le graphe")
-        plt.xlabel("Fréquences (indices des valeurs propres)")
-        plt.ylabel("Nœuds")
-        plt.show()
+        #plot_energy(energy)
 
         return energy
     
@@ -155,6 +163,7 @@ class GraphAnalyzer:
             # Compute φ(p, k, q)
             phi = numerator / denominator
             return phi
+
         def plot_vertex_frequency_distribution(G_matrix):
             """
             Plots the vertex-frequency energy distribution (G(n, k)) and its marginal distributions.
@@ -168,36 +177,42 @@ class GraphAnalyzer:
             frequency_marginals = np.sum(G_matrix, axis=0)  # Sum over vertices (columns)
 
             # Create figure and gridspec layout
-            fig = plt.figure(figsize=(10, 10))
-            gs = fig.add_gridspec(2, 2, width_ratios=[4, 1], height_ratios=[4, 1], hspace=0.3, wspace=0.3)
+            fig = plt.figure(figsize=(10, 8))
+            gs = fig.add_gridspec(2, 3, width_ratios=[4, 0.1, 1], height_ratios=[4, 1], hspace=0.3, wspace=0.3)
 
             # Main heatmap plot (G(n, k))
-            ax_main = fig.add_subplot(gs[0, 0])
+            ax_main = fig.add_subplot(gs[0, 0])  # Heatmap
             im = ax_main.imshow(G_matrix, aspect='auto', cmap='hot', interpolation='nearest')
             ax_main.set_title("Vertex-frequency energy distribution")
             ax_main.set_xlabel("Frequency index")
             ax_main.set_ylabel("Vertex index")
-            plt.colorbar(im, ax=ax_main, orientation='vertical', label="Energy")
+
+            # Colorbar
+            cbar_ax = fig.add_subplot(gs[0, 1])  # Cellule pour la colorbar
+            cbar = plt.colorbar(im, cax=cbar_ax, orientation='vertical', label="Energy")
 
             # Marginal distribution over frequencies
-            ax_right = fig.add_subplot(gs[0, 1], sharey=ax_main)
+            ax_right = fig.add_subplot(gs[0, 2], sharey=ax_main)  # Marginal distribution on the right
             ax_right.plot(frequency_marginals, range(len(frequency_marginals)), 'o-')
             ax_right.set_xlabel("Marginals")
             ax_right.set_ylabel("Spectral index")
             ax_right.invert_yaxis()  # Align y-axis with the heatmap
 
-            # Marginal distribution over vertices
-            ax_bottom = fig.add_subplot(gs[1, 0], sharex=ax_main)
+            # Marginal distribution over vertices (aligned below heatmap)
+            ax_bottom = fig.add_subplot(gs[1, 0])  # Aligns exactly below the heatmap
             ax_bottom.stem(range(len(vertex_marginals)), vertex_marginals, basefmt=" ")
             ax_bottom.set_xlabel("Vertex index")
             ax_bottom.set_ylabel("Marginals")
+            ax_bottom.yaxis.set_label_coords(-0.1, 0.5)  # Adjust y-axis label position
 
-            # Hide empty bottom-right corner
-            ax_empty = fig.add_subplot(gs[1, 1])
-            ax_empty.axis('off')
+            # Hide the bottom-right corner (empty space)
+            ax_empty = fig.add_subplot(gs[1, 1:])
+            ax_empty.axis('off')  # Disable this subplot completely
 
             # Show the full plot
             plt.show()
+
+
         def compute_G(n, k, alpha):
             """
             Computes the vertex-frequency energy distribution G(n, k).
@@ -241,11 +256,12 @@ class GraphAnalyzer:
             for k in range(self.U.shape[1]):
                 energyG[n, k] = compute_G(n, k, alpha=1)
         
-        plot_vertex_frequency_distribution(energyG)
+        #Visualization
+        #plot_vertex_frequency_distribution(energyG)
         
         return energyG
     
-    def compute_sigma_lambda_squared(self, G):
+    def bandwith(self, G):
         """
         the local smoothness bandwith : Computes the variance of the spectral energy distribution σ²_λ(n) for each vertex n.
 
@@ -274,3 +290,18 @@ class GraphAnalyzer:
 
         return sigma_lambda_squared
         
+    def find_mainfrequency_ofnode(self, G):
+        """
+        Find the main frequency of the signal.
+        
+        Args:
+            G (np.ndarray): Energy distribution of the signal on the graph.
+        
+        Returns:
+            List: List of Index of the main frequency for each node.
+        """
+        kindex =[]
+        for n in range(G.shape[0]):
+            kindex.append(np.argmax(G[n, :]))
+        
+        return kindex   

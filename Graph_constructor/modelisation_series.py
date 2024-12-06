@@ -1,8 +1,9 @@
+#%%
 """ In this document we will test the functions of the folder (dataloader.py, graph_builder.py)"""
-"""%load_ext autoreload
-%autoreload 2"""
+%load_ext autoreload
+%autoreload 2
 
- #%%
+ # Initialisation et importation
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +13,6 @@ from graph_builder import GraphBuilder
 from visualizations import GraphPlotter
 #from graph_analyzer import GraphAnalyzer
 
-#%% config informations 
 path_train = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\train.csv"
 path_test = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\test.csv"
 
@@ -43,17 +43,11 @@ df_pos = pd.DataFrame(
     'POPULATION_REGION': [5987172, 3307286, 12395148, 5542094, 3402932, 3873096, 2564915, 2785393, 6081985,
                           8153233, 6053548, 5131187]
     })
-
-#%% Test the DataLoader class
 data = DataLoader(path_train, path_test, kwargs={"start_date": "2018-01-01", "end_date": None})
 
 
-print("hello")
-print(data.nodes_dataframe["0"]["temp"][3])
-for key in data.nodes_dataframe.keys():
-    print(key)
 
-#%% Test the GraphBuilder class
+# Test the GraphBuilder class
 Graph = GraphBuilder(L_path_to_W)
 dictW = {}
 for i in range(len(L_path_to_W)):
@@ -73,24 +67,46 @@ for i in range(len(L_path_to_W)):
 
 
 
+# We are ploting the temperature over the time for a given node
+# calculating the shape of the matrix signals 
+def get_signals(nodes_features, name_column, N :int):
+    """
+    Get the signals of interest to generate the signal graph.
+    
+    Args:
+        self.nodes_features (dict): Dictionary containing the features of the nodes.
+    
+    Returns:
+        np.ndarray: Matrix of the signals.
+    """
+    signals = [] #np.zeros((Nbnodes, N))
+    for key in nodes_features.keys():
+        signals.append(nodes_features[key][name_column][:N])
+    signals_array = np.array(signals)
+    
+    #Normalization of the signal
+    for i in range(signals_array.shape[0]):
+        signals_array[i,:] = (signals_array[i,:] - np.mean(signals_array[i,:])) / np.std(signals_array[i,:])
+    return np.array(signals_array)
 
-#%% Test the GraphAnalyzer class
-"""keys = ["load","temp","nebu","wind","tempMax","tempMin"]
+    
+def plot_signals(signals) : 
+    """ In this function wi will plot the signals for each nodes over the time on a different plot"""
+    plt.figure(figsize=(15, 10))
+    for i in range(signals.shape[0]):
+        plt.plot(signals[i,:], label=f"Node {i}")
+    plt.xlabel("Time")
+    plt.ylabel("Temperature")
+    plt.title("Temperature of each node over the time")
+    plt.legend()
+    
+    
+    
+signals = get_signals(data.nodes_dataframe, "temp", 1000)
+plot_signals(signals)
 
-for _, Wi in dictW.items():
-    for key in keys:
-        smooth = []
-        # We are using tqdm in this loop
-        
-        for i in tqdm(range(10)) :
-            analyzed_graph = GraphAnalyzer(Wi, data.nodes_dataframe, key ,i, **df_pos)
-            #print(analyzed_graph.smoothness)
-            #smooth.append(analyzed_graph.smoothness)
-        #plt.plot(smooth)
-        #plt.show()"""
 
-
-# %% Test the GraphAnalyzer class only on one W matrix and on Temperature
+# %% (commented) Test the GraphAnalyzer class only on one W matrix and on Temperature
 from graph_analyzer import GraphAnalyzer
 
 
@@ -192,49 +208,12 @@ def plot_everything(W, data, df_pos, key):
 
 #plot_everything(dictW["W3"], data, df_pos, "temp")
 
-print("END")
-# %% We are ploting the temperature over the time for a given node
 
         
-# calculating the shape of the matrix signals 
-def get_signals(nodes_features, name_column, N :int):
-    """
-    Get the signals of interest to generate the signal graph.
-    
-    Args:
-        self.nodes_features (dict): Dictionary containing the features of the nodes.
-    
-    Returns:
-        np.ndarray: Matrix of the signals.
-    """
-    signals = [] #np.zeros((Nbnodes, N))
-    for key in nodes_features.keys():
-        signals.append(nodes_features[key][name_column][:N])
-    signals_array = np.array(signals)
-    
-    #Normalization of the signal
-    for i in range(signals_array.shape[0]):
-        signals_array[i,:] = (signals_array[i,:] - np.mean(signals_array[i,:])) / np.std(signals_array[i,:])
-    return np.array(signals_array)
-
-    
-def plot_signals(signals) : 
-    """ In this function wi will plot the signals for each nodes over the time on a different plot"""
-    plt.figure(figsize=(15, 10))
-    for i in range(signals.shape[0]):
-        plt.plot(signals[i,:], label=f"Node {i}")
-    plt.xlabel("Time")
-    plt.ylabel("Temperature")
-    plt.title("Temperature of each node over the time")
-    plt.legend()
-    
-    
-    
-signals = get_signals(data.nodes_dataframe, "temp", 1000)
-plot_signals(signals)
 
 
-# %%
+
+# %% Test 1 to fit temporal series
 from scipy.optimize import curve_fit
 
 def fit_trend_and_periodic(t, signal, plot_result=True):
@@ -423,8 +402,47 @@ if __name__ == "__main__":
 
 # %% Test 2 to fit temporal series
 from scipy.optimize import curve_fit
+import scipy.signal as signal
+import matplotlib.pyplot as plt
 
-def fit_signal_with_trend_and_periodic(t, signal, poly_degree=3, num_periodic=2, plot_result=True):
+def lowpass_filter(data, cutoff_freq, sample_rate, order=4, plot_result=True):
+    """
+    Applique un filtre passe-bas à des données.
+
+    Paramètres :
+    - data : ndarray, le signal à filtrer.
+    - cutoff_freq : float, fréquence de coupure (en Hz).
+    - sample_rate : float, fréquence d'échantillonnage (en Hz).
+    - order : int, ordre du filtre (plus grand = pente plus forte).
+    - plot_result : bool, affiche le signal original et filtré si True.
+
+    Retourne :
+    - filtered_data : ndarray, le signal filtré.
+    """
+
+    # Normalisation de la fréquence de coupure (entre 0 et 1)
+    nyquist = 0.5 * sample_rate
+    normalized_cutoff = cutoff_freq / nyquist
+
+    # Conception du filtre passe-bas (Butterworth)
+    b, a = signal.butter(order, normalized_cutoff, btype='low', analog=False)
+
+    # Application du filtre au signal
+    filtered_data = signal.filtfilt(b, a, data)
+
+    # Optionnel : tracer les résultats
+    if plot_result:
+        plt.figure(figsize=(10, 6))
+        plt.plot(data, label="Signal original", alpha=0.7)
+        plt.plot(filtered_data, label=f"Signal filtré (fc={cutoff_freq} Hz)", color='red')
+        plt.legend()
+        plt.xlabel("Temps (échantillons)")
+        plt.ylabel("Amplitude")
+        plt.title("Filtrage passe-bas")
+        plt.show()
+
+    return filtered_data
+def fit_signal_with_trend_and_periodic(t, signal, cutoff_freq = 1 , poly_degree=3, num_periodic=2, plot_result=True):
     """
     Ajuste un modèle combinant une tendance polynomiale (degré variable)
     et plusieurs fonctions périodiques avec cosinus (avec déphasage) à un signal donné.
@@ -462,12 +480,12 @@ def fit_signal_with_trend_and_periodic(t, signal, poly_degree=3, num_periodic=2,
     # Définition des paramètres initiaux
     p0 = [0] * (poly_degree + 1)
     
-    Lfreq = [1,0.3, 2, 0.5, 4, 0.7, 6]
+    
     for i in range(num_periodic):
-        p0 += [1, Lfreq[i], 0]  # Amplitude initiale, fréquence initiale, phase initiale
+        p0 += [1, cutoff_freq/num_periodic*(i+1), 0]  # Amplitude initiale, fréquence initiale, phase initiale
 
     # Ajustement des paramètres avec curve_fit
-    params, _ = curve_fit(model, t, signal, p0=p0, maxfev=100000)
+    params, _ = curve_fit(model, t, signal, p0=p0, maxfev=10000)
 
     # Signal ajusté
     fitted_signal = model(t, *params)
@@ -488,11 +506,13 @@ def fit_signal_with_trend_and_periodic(t, signal, poly_degree=3, num_periodic=2,
 # Exemple d'utilisation
 if __name__ == "__main__":
     # Génération d'un signal synthétique
-    t = np.linspace(0, 1000//48, 1000)
-
+    sampling_rate = 48
+    t = np.linspace(0, 1000//sampling_rate, 1000)
+    fc = 2  # Fréquence de coupure du filtre passe-bas
     # Ajustement avec un polynôme de degré 3 et 2 composantes périodiques
     for i in range(signals.shape[0]) :
-        params, fitted_signal = fit_signal_with_trend_and_periodic(t, signals[i,:], poly_degree=5, num_periodic=3)
+        filtered_signal = lowpass_filter(signals[i,:], cutoff_freq=fc, sample_rate=sampling_rate, plot_result=False)
+        params, fitted_signal = fit_signal_with_trend_and_periodic(t, filtered_signal,cutoff_freq = fc, poly_degree=4, num_periodic=4)
     print("Paramètres ajustés :", params) 
     
     #
@@ -501,5 +521,123 @@ if __name__ == "__main__":
     
    
     
+
+# %% Use GAM 1 to fit temporal series
+from pygam import LinearGAM, s
+
+
+def fit_gam(t, signal, n_splines=20, lam=10, periodic_frequencies=None, plot_result=True):
+    """
+    Ajuste un modèle GAM sur un signal donné, avec une tendance (splines)
+    et des termes périodiques optionnels.
+
+    Paramètres :
+    - t : ndarray, les points temporels.
+    - signal : ndarray, le signal à ajuster.
+    - n_splines : int, nombre de splines pour la tendance.
+    - lam : float, paramètre de régularisation pour les splines.
+    - periodic_frequencies : list or None, fréquences des termes périodiques à inclure (en Hz).
+    - plot_result : bool, affiche le graphique des résultats si True.
+
+    Retour :
+    - gam : Modèle GAM ajusté.
+    - fitted_signal : ndarray, signal ajusté par le modèle.
+    """
+
+    # Construction des caractéristiques
+    X = t.reshape(-1, 1)  # Colonne pour la tendance
+    if periodic_frequencies is not None:
+        for freq in periodic_frequencies:
+            X = np.column_stack((X, np.sin(2 * np.pi * freq * t), np.cos(2 * np.pi * freq * t)))
+
+    # Création du modèle GAM
+    num_features = X.shape[1]
+    if periodic_frequencies is not None:
+        # Modèle avec splines pour la tendance + termes linéaires pour périodicité
+        gam = LinearGAM(s(0, n_splines=n_splines, lam=lam) + 
+                        sum([s(i, n_splines=5) for i in range(1, num_features)])).fit(X, signal)
+    else:
+        # Modèle uniquement avec splines pour la tendance
+        gam = LinearGAM(s(0, n_splines=n_splines, lam=lam)).fit(X, signal)
+
+    # Prédiction du signal ajusté
+    fitted_signal = gam.predict(X)
+
+    # Optionnel : afficher les résultats
+    if plot_result:
+        plt.figure(figsize=(12, 6))
+        plt.plot(t, signal, label="Signal original", alpha=0.7)
+        plt.plot(t, fitted_signal, label="Signal ajusté (GAM)", linestyle="--", color="red")
+        plt.xlabel("Temps")
+        plt.ylabel("Amplitude")
+        plt.legend()
+        plt.title(f"Ajustement GAM : {n_splines} splines + {len(periodic_frequencies) if periodic_frequencies else 0} termes périodiques")
+        plt.show()
+
+    return gam, fitted_signal
+
+
+# Exemple d'utilisation
+"""if __name__ == "__main__":
+    # Génération d'un signal synthétique
+    t = np.linspace(0, 1000//48, 1000)
+    for i in range(signals.shape[0]) :
+        # Ajustement avec 20 splines et 3 composantes périodiques
+        gam, fitted_signal = fit_gam(t, signals[i,:], n_splines=20, lam=10, periodic_frequencies=[1, 2, 4])
+    print(gam.summary())"""
+
+
+
+# %% test de graph_series_analyzer
+%load_ext autoreload
+%autoreload 2
+from graph_series_analyzer import GraphSeriesAnalyzer
+
+
+
+
+# Create a random adjacency matrix
+def keep_top_n(W, N: int) -> np.ndarray:
+    """ 
+    Keep the N largest values in a matrix and set the others to zero.
+    
+    Args:
+        matrix (np.ndarray): Input matrix.
+        N (int): Number of largest values to keep.
+    returns:
+        np.ndarray: Filtered matrix with only the N largest values.
+    """
+    matrix = W
+    # Flatten the matrix to find the N largest values
+    flat_vector = matrix.flatten()
+    flat_matrix = np.array(flat_vector).flatten()
+    
+    # If N exceeds the total size of the matrix, keep all elements
+    if N >= flat_matrix.shape[0]:
+        return matrix
+    
+    # Find the Nth largest value
+    sorted = np.sort(flat_matrix)
+    threshold = sorted[-N]
+    
+    # Create a filtered matrix where only values >= threshold are kept
+    filtered_matrix = np.where(matrix >= threshold, matrix, 0)
+    return filtered_matrix
+
+for i in range (5) :
+    W = np.random.rand(12, 12)
+    np.fill_diagonal(W, 0)
+    W_filtred = keep_top_n(W, 20)
+    analyzer = GraphSeriesAnalyzer (W_filtred, data.nodes_dataframe, "temp", 1000 , cutoff_freq= 1 , **df_pos)
+    print(analyzer.smoothness)
+    print(analyzer.params)
+    print(analyzer.Lsmoothness)
+
+for key in dictW.keys():
+    analyzer = GraphSeriesAnalyzer (dictW[key], data.nodes_dataframe, "temp", 1000 , cutoff_freq= 1 , **df_pos)
+    print(analyzer.smoothness)
+    print(analyzer.params)
+    print(analyzer.Lsmoothness)
+
 
 # %%
