@@ -98,10 +98,11 @@ from graph_series_analyzer import GraphSeriesAnalyzer
 nodes_features = data.nodes_dataframe
 name_column = "temp"
 nsize = 1000
+AE_path = "AE_model.pth"
 
 # Test the GraphSeriesAnalyzer class
 for i in range(len(L_path_to_W)):
-    graph_series = GraphSeriesAnalyzer(dictGraphs["Graphs" + str(i)] , nodes_features, name_column,nsize, **df_pos)
+    graph_series = GraphSeriesAnalyzer(dictGraphs["Graphs" + str(i)] , nodes_features, name_column,nsize,AE_path,  **df_pos)
 
 
 

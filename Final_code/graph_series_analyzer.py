@@ -7,11 +7,14 @@ from scipy.optimize import curve_fit
 import scipy.signal as signal
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+from AE import Autoencoder
 #defintion of the class
 
 class GraphSeriesAnalyzer : 
     """__summary__ : This class is used to analyze the graph constructed from the data of the temporal series."""
-    def __init__(self, Graphe_builded, nodes_features, name_column: str, Nsize : int , cutoff_freq= 1 , plot_result = True, **kwargs):
+    def __init__(self, Graphe_builded, nodes_features, name_column: str, Nsize : int , AE_path ,  cutoff_freq= 1 , plot_result = False, **kwargs):
         
         self.W = Graphe_builded.W
         self.nodes_features = nodes_features
@@ -25,6 +28,12 @@ class GraphSeriesAnalyzer :
         
         # Convert the signals to models
         self.signals = self.get_signals()
+        
+        # Using AE 
+        self.model = torch.load(AE_path)
+        self.encoded_signals = self.AE()
+        
+        # Convert model trend+periodicity
         self.signals_filtered = self.lowpass_filter(cutoff_freq)
         self.t = np.linspace(0, self.Nsize//48, self.Nsize)# abcisse
         self.params, self.fitted_signal = self.fit_signal_with_trend_and_periodic(cutoff_freq)
@@ -35,6 +44,7 @@ class GraphSeriesAnalyzer :
         #Compute the smoothness generalized
         self.smoothness_model = self.smoothness_calcul_generalized(self.params)
         self.smoothness_fft = self.smoothness_calcul_generalized(self.signals_fft)
+        self.smoothness_AE = self.smoothness_calcul_generalized(self.encoded_signals)
         print("Done")
         
         
@@ -124,7 +134,7 @@ class GraphSeriesAnalyzer :
         #Normalization of the parameters
         params_normalized = np.zeros_like(params)
         Lsmoothness = []
-        for j in range(self.params.shape[1]):
+        for j in range(params.shape[1]):
             params_normalized[:,j] = (params[:,j] - np.mean(params[:,j])) / np.std(params[:,j])
             #print("variance",np.std(self.params[:,j]))
             #print("mean",np.mean(self.params[:,j]))
@@ -132,7 +142,7 @@ class GraphSeriesAnalyzer :
         # Normalisation of the Laplacian
         self.L_normalized = normalize_laplacian_sym(self.L)
 
-        for j in range (self.params.shape[1]):
+        for j in range (params.shape[1]):
             Lsmoothness.append(params_normalized[:,j].T @ self.L_normalized@ params_normalized[:,j])
             
         smoothness = np.sum(np.array(Lsmoothness))
@@ -268,3 +278,37 @@ class GraphSeriesAnalyzer :
             plt.title("Transformée de Fourier du signal")
             plt.show()
         return np.abs(yf_cut), xf_cut
+    
+    def AE (self) : 
+        """
+        Load the Autoencoder model and compute the reconstruction error
+        """
+        def MAPE(y_true, y_pred):
+            """
+            Calcule le MAPE (Mean Absolute Percentage Error) entre les valeurs réelles et prédites.
+
+            Arguments :
+            - y_true (torch.Tensor) : Valeurs réelles (taille N)
+            - y_pred (torch.Tensor) : Valeurs prédites (taille N)
+            
+            Retour :
+            - mape (torch.Tensor) : Erreur MAPE (en pourcentage)
+            """
+            epsilon = 1e-10  # Pour éviter la division par zéro
+            y_true = y_true.clamp(min=epsilon)  # Évitez la division par zéro
+            mape = torch.mean(torch.abs((y_true - y_pred) / y_true)) * 100
+            return mape
+        model = self.model
+        encoded_signal = model.encode(torch.tensor(self.signals))
+        
+        
+        criterion = nn.MSELoss()
+        signals = torch.tensor(self.signals)
+        outputs = model.predict(signals)
+        loss = criterion(outputs, signals)
+        print("RMSE", loss.item())
+        
+        mape_value  = MAPE(signals, outputs)
+        print("MAPE", mape_value)
+        
+        return encoded_signal.detach().numpy()

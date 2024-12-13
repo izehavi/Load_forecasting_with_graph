@@ -18,9 +18,6 @@ device = (
 )
 print(f"Using {device} device")
 
-#%% Define the Autoencoder model
-%load_ext autoreload
-%autoreload 2
 class Autoencoder(nn.Module):
     def __init__(self, nsize=1000, latent_size=32, deepness=3):
         super(Autoencoder, self).__init__()
@@ -68,97 +65,106 @@ class Autoencoder(nn.Module):
         x = self.decoder(x)
         #x = (x - torch.mean(x)) / torch.std(x)
         return x
+    
+    def predict(self, x):
+        x= x.float()
+        x = self.encoder(x)
+        meanx = torch.mean(x)
+        stdx = torch.std(x)
+        x = (x - meanx) / stdx
+        x = self.decoder(x)
+        x = x * stdx + meanx
+        return x
 
 #%% 2 Importation of the dataset
-nsize = 2000
-deepness = 5
-latent_size = 4
+# nsize = 1000
+# deepness = 4
+# latent_size = 8
 
 
-batch_size = 64 # Number of samples in each batch
-num_epochs = 100  # Number of epochs to train
-path_train = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\train.csv"
-path_test = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\test.csv"
-data = DL(path_train, path_test, kwargs={"start_date": "2018-01-01", "end_date": None})
-nodes_dataframe = data.nodes_dataframe
+# batch_size = 128 # Number of samples in each batch
+# num_epochs = 100  # Number of epochs to train
+# path_train = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\train.csv"
+# path_test = r"C:\Users\zehav\OneDrive\Bureau\ENS\S5_ARIA\stage_3mois_graph\Projet_github\Projet\Graph_constructor\test.csv"
+# data = DL(path_train, path_test, kwargs={"start_date": "2018-01-01", "end_date": None})
+# nodes_dataframe = data.nodes_dataframe
 
-def get_signals(nodes_features,Lname_column, Ntotal, Nsize):
-    """__summary__ : This function is used to extract the signals of the node over the time from the dataframe"""
+# def get_signals(nodes_features,Lname_column, Nsize):
+#     """__summary__ : This function is used to extract the signals of the node over the time from the dataframe"""
 
-    signals = [] 
-    for name_column in Lname_column:
-        for i in range(Ntotal // Nsize):
-            for key in nodes_features.keys():
-                signals.append(np.array(nodes_features[key][name_column][Nsize*i :Nsize * (i+1)]))
-    signals_array = np.array(signals)
+#     signals = [] 
+#     Ntotal = len(nodes_features[list(nodes_features.keys())[0]][Lname_column[0]])
+#     for name_column in Lname_column:
+#         for i in range(Ntotal // Nsize):
+#             for key in nodes_features.keys():
+#                 signals.append(np.array(nodes_features[key][name_column][Nsize*i :Nsize * (i+1)]))
+#     signals_array = np.array(signals)
     
-    signal_array_normalized = np.zeros(signals_array.shape)
-    #Normalization of the signal
-    for i in range(signals_array.shape[0]):
-        signal_array_normalized[i,:] = (signals_array[i,:] - np.mean(signals_array[i,:])) / np.std(signals_array[i,:])
+#     signal_array_normalized = np.zeros(signals_array.shape)
+#     #Normalization of the signal
+#     for i in range(signals_array.shape[0]):
+#         signal_array_normalized[i,:] = (signals_array[i,:] - np.mean(signals_array[i,:])) / np.std(signals_array[i,:])
     
-    return signal_array_normalized
+#     return signal_array_normalized
 
-signals = get_signals(data.nodes_dataframe, ["load","temp","nebu","wind", "tempMax","tempMin"], 30*nsize, nsize)
-dataset_tensor = torch.tensor(signals)
-dataloader = DataLoader(TensorDataset(dataset_tensor), batch_size=batch_size, shuffle=True)
+# signals = get_signals(data.nodes_dataframe, ["load","temp","nebu","wind", "tempMax","tempMin"], nsize)
+# print(signals.shape)
+# dataset_tensor = torch.tensor(signals)
+# dataloader = DataLoader(TensorDataset(dataset_tensor), batch_size=batch_size, shuffle=True)
 
 
 
-#%% 3️ Create the model, define loss and optimizer
-model = Autoencoder(nsize,latent_size, deepness )  # Create an instance of the Autoencoder
-criterion = nn.MSELoss()  # Mean Squared Error is used for reconstruction loss
-optimizer = torch.optim.Adam(model.parameters(),
-                             lr = 1e-3,
-                             weight_decay = 1e-8)  # Use Adam optimizer
+# #%% 3️ Create the model, define loss and optimizer
+# model = Autoencoder(nsize,latent_size, deepness )  # Create an instance of the Autoencoder
+# criterion = nn.MSELoss()  # Mean Squared Error is used for reconstruction loss
+# optimizer = torch.optim.Adam(model.parameters(),
+#                              lr = 3e-4,
+#                              weight_decay = 1e-8)  # Use Adam optimizer
 
-summary(model,input_size=(nsize,)) 
+# summary(model,input_size=(nsize,)) 
 
-#%% 4️ Train the model
-
-%load_ext autoreload
-%autoreload 2
-Lloss = []
-for epoch in range(num_epochs):
-    i=0
-    for batch in dataloader:
-        signals = batch[0].float()  # Les signaux sont dans la première position
-        optimizer.zero_grad()
-        outputs = model.forward(signals)
-        loss = criterion(outputs, signals)
-        Lloss.append(loss.item())
-        loss.backward()
-        optimizer.step()
+# #%% 4️ Train the model
+# Lloss = []
+# for epoch in range(num_epochs):
+#     i=0
+#     for batch in dataloader:
+#         signals = batch[0].float()  # Les signaux sont dans la première position
+#         optimizer.zero_grad()
+#         outputs = model.forward(signals)
+#         loss = criterion(outputs, signals)
+#         Lloss.append(loss.item())
+#         loss.backward()
+#         optimizer.step()
         
-        if i==0 :
-            signal_input = batch[0][0]
-            signal_output = model.forward(signal_input)
-            plt.clf()
-            plt.plot(signal_input, label='input')
-            plt.plot(signal_output.detach().numpy(), label='output')
-            plt.legend()
-            plt.show()
-            i+=1
+#         if i==0 :
+#             signal_input = batch[0][0]
+#             signal_output = model.forward(signal_input)
+#             plt.clf()
+#             plt.plot(signal_input, label='input')
+#             plt.plot(signal_output.detach().numpy(), label='output')
+#             plt.legend()
+#             plt.show()
+#             i+=1
 
-    print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}")
+#     print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-plt.clf()
-plt.plot(Lloss)
-plt.show()
-print("Training complete!")
+# plt.clf()
+# plt.plot(Lloss)
+# plt.show()
+# print("Training complete!")
 
-# %%
-torch.save(model, "AE_model.pth")
-# %%
-model2 = torch.load("AE_model.pth")
-# %%
-size = 48
-signal_input = dataset_tensor[70]
-signal_output = model2.forward(signal_input)
-plt.plot(signal_input[:size], label='input')
-plt.plot(signal_output.detach().numpy()[:size], label='output')
-plt.legend()
-plt.show()
-# %%
-print(model2.encode(signal_input))
-# %%
+# # %%
+# torch.save(model, "AE_model.pth")
+# # %%
+# model2 = torch.load("AE_model.pth")
+# # %%
+# size = 48
+# signal_input = dataset_tensor[70]
+# signal_output = model2.forward(signal_input)
+# plt.plot(signal_input[:size], label='input')
+# plt.plot(signal_output.detach().numpy()[:size], label='output')
+# plt.legend()
+# plt.show()
+# # %%
+# print(model2.encode(signal_input))
+# # %%
