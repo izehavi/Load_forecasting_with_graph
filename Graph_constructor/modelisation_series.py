@@ -624,20 +624,20 @@ def keep_top_n(W, N: int) -> np.ndarray:
     filtered_matrix = np.where(matrix >= threshold, matrix, 0)
     return filtered_matrix
 
-for i in range (5) :
+for i in range (10) :
     W = np.random.rand(12, 12)
     np.fill_diagonal(W, 0)
     W_filtred = keep_top_n(W, 20)
     analyzer = GraphSeriesAnalyzer (W_filtred, data.nodes_dataframe, "temp", 1000 , cutoff_freq= 1 , **df_pos)
     print(analyzer.smoothness)
     print(analyzer.params)
-    print(analyzer.Lsmoothness)
+    #print(analyzer.Lsmoothness)
 
 for key in dictW.keys():
     analyzer = GraphSeriesAnalyzer (dictW[key], data.nodes_dataframe, "temp", 1000 , cutoff_freq= 1 , **df_pos)
     print(analyzer.smoothness)
     print(analyzer.params)
-    print(analyzer.Lsmoothness)
+    #print(analyzer.Lsmoothness)
 
 
 # %%

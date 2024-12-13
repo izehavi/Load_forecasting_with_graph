@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 class GraphSeriesAnalyzer : 
     """__summary__ : This class is used to analyze the graph constructed from the data of the temporal series."""
-    def __init__(self, W, nodes_features, name_column: str, Nsize : int , cutoff_freq= 1 , plot_result = True, **kwargs):
+    def __init__(self, W, nodes_features, name_column: str, Nsize : int , cutoff_freq= 1 , plot_result = False, **kwargs):
         
         self.W = W
         self.nodes_features = nodes_features
@@ -130,18 +130,10 @@ class GraphSeriesAnalyzer :
         # Normalisation of the Laplacian
         self.L_normalized = normalize_laplacian_sym(self.L)
 
-        #print("param_normalized", params_normalized)
-        Lsmoothness2 = []
-        Lsmoothness3 = []
         for j in range (self.params.shape[1]):
             Lsmoothness.append(params_normalized[:,j].T @ self.L_normalized@ params_normalized[:,j])
-            # Compare the result with another way to calculate the smoothness
-            Lsmoothness2.append(np.dot(params_normalized[:,j].T, np.dot(self.L_normalized, params_normalized[:,j])))
-            Lsmoothness3.append(smoothness_withsum(self.L_normalized, params_normalized[:,j]))
             
         smoothness = np.sum(np.array(Lsmoothness))
-        smoothness2 = np.sum(np.array(Lsmoothness2))
-        self.Lsmoothness = Lsmoothness
         return smoothness
     
     def lowpass_filter(self, cutoff_freq, sample_rate=48 , order=4):
